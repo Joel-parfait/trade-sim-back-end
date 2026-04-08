@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  origin: ["https://ton-nouveau-front.vercel.app", "http://localhost:3000"],
+  origin: "https://trade-sim-front-end.vercel.app", // Remplace par ton vrai domaine front
   credentials: true
 }));
 
