@@ -67,3 +67,5 @@ app.listen(PORT, () => {
     }
   }, 5000);
 });
+
+export default app;
