@@ -46,6 +46,10 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+app.get('/', (req, res) => {
+  res.json({ message: "Welcome to TradeSim API - Backend is running!" });
+});
+
 // Lancement du serveur
 app.listen(PORT, () => {
   console.log(`\n=========================================`);
