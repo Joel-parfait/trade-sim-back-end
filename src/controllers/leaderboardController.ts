@@ -11,33 +11,38 @@ export const getLeaderboard = async (req: AuthRequest, res: Response) => {
         u.email, 
         u.avatar_id,
         w.balance, 
-        w.total_profit,
-        (w.balance + w.total_profit) as total_value,
+        COALESCE(w.total_profit, 0) as total_profit,
         COUNT(t.id) as total_trades
       FROM users u
-      JOIN wallets w ON u.id = w.user_id
+      INNER JOIN wallets w ON u.id = w.user_id
       LEFT JOIN trades t ON u.id = t.user_id
       WHERE u.is_admin = FALSE
       GROUP BY u.id, u.username, u.email, u.avatar_id, w.balance, w.total_profit
-      ORDER BY total_value DESC
+      ORDER BY (w.balance + COALESCE(w.total_profit, 0)) DESC
       LIMIT 50
     `;
 
     const result = await pool.query(query);
     
-    const rankings = result.rows.map((row, index) => ({
-      rank: index + 1,
-      // On utilise le username de la BD, s'il est vide on coupe l'email par sécurité
-      username: row.username || row.email.split('@')[0],
-      portfolioValue: parseFloat(row.total_value),
-      totalTrades: parseInt(row.total_trades || 0),
-      avatarId: row.avatar_id,
-      userId: row.id 
-    }));
+    const rankings = result.rows.map((row, index) => {
+      // Calcul de la valeur totale en JS pour plus de sécurité
+      const balance = parseFloat(row.balance || 0);
+      const profit = parseFloat(row.total_profit || 0);
+      
+      return {
+        rank: index + 1,
+        username: row.username || (row.email ? row.email.split('@')[0] : 'Trader'),
+        portfolioValue: balance + profit,
+        totalTrades: parseInt(row.total_trades || 0),
+        avatarId: row.avatar_id,
+        userId: row.id 
+      };
+    });
 
     res.json(rankings);
   } catch (error) {
-    console.error("Erreur Leaderboard SQL:", error);
+    // Ce log s'affichera dans ton terminal de commande (backend)
+    console.error("Détail Erreur SQL Neon:", error);
     res.status(500).json({ message: "Erreur lors de la récupération du classement" });
   }
 };
