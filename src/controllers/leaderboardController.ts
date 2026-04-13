@@ -4,7 +4,7 @@ import { AuthRequest } from '../middleware/authMiddleware.js';
 
 export const getLeaderboard = async (req: AuthRequest, res: Response) => {
   try {
-    // Utilisation de sous-requête pour le COUNT afin d'éviter les erreurs de GROUP BY complexes
+    // Version sans GROUP BY complexe pour éviter l'erreur 500 sur Neon/Postgres
     const query = `
       SELECT 
         u.id,
@@ -21,11 +21,10 @@ export const getLeaderboard = async (req: AuthRequest, res: Response) => {
       LIMIT 50
     `;
 
-    console.log("--- Tentative de récupération du Leaderboard ---");
     const result = await pool.query(query);
-    console.log(`Données brutes SQL : ${result.rows.length} utilisateurs trouvés.`);
     
     const rankings = result.rows.map((row, index) => {
+      // Conversion forcée en nombre pour éviter les problèmes de type
       const balance = parseFloat(row.balance || 0);
       const profit = parseFloat(row.total_profit || 0);
       
@@ -39,10 +38,10 @@ export const getLeaderboard = async (req: AuthRequest, res: Response) => {
       };
     });
 
-    console.log("JSON final envoyé au frontend prêt.");
     res.json(rankings);
   } catch (error) {
-    console.error("ERREUR CRITIQUE BACKEND LEADERBOARD :", error);
+    // Ce log apparaîtra dans tes logs Vercel/Serveur
+    console.error("Erreur SQL Leaderboard détaillée:", error);
     res.status(500).json({ message: "Erreur serveur lors du calcul du classement" });
   }
 };
