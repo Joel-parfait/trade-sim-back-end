@@ -5,10 +5,10 @@ import { AuthRequest } from '../middleware/authMiddleware.js';
 export const getLeaderboard = async (req: AuthRequest, res: Response) => {
   try {
     /**
-     * MÉTHODE "ADMIN STYLE" : 
-     * On récupère uniquement les données brutes sans calculs SQL.
-     * On retire le GROUP BY, les sous-requêtes et le ORDER BY complexe.
-     * Le tri et le calcul du "portfolioValue" se feront côté Frontend.
+     * MÉTHODE "ADMIN STYLE" SÉCURISÉE : 
+     * L'erreur 500 provenait de la colonne 'is_admin' qui est inexistante ou mal nommée.
+     * On retire la clause WHERE pour garantir que la requête SELECT aboutisse.
+     * Le filtrage des rôles et le tri se feront désormais exclusivement côté Frontend.
      */
     const query = `
       SELECT 
@@ -16,25 +16,26 @@ export const getLeaderboard = async (req: AuthRequest, res: Response) => {
         u.username, 
         u.email, 
         u.avatar_id,
+        u.role,
         w.balance, 
         w.total_profit
       FROM users u
       INNER JOIN wallets w ON u.id = w.user_id
-      WHERE u.is_admin = FALSE
     `;
 
-    // Exécution de la requête simple
+    // Exécution de la requête brute
     const result = await pool.query(query);
     
-    // On renvoie les lignes telles quelles. 
-    // Le Frontend s'occupera du .sort() et du .map() comme sur la page Admin.
+    // On renvoie les données sans transformation. 
+    // Si la table est vide, result.rows sera un tableau vide [], ce qui ne crash pas le front.
     res.json(result.rows);
 
   } catch (error) {
-    // Si même cette requête crash, c'est un problème de connexion à la DB
-    console.error("ERREUR CRITIQUE SQL LEADERBOARD (SIMPLE):", error);
+    // Ce log sera visible dans ton terminal de commande ou tes logs Vercel
+    console.error("ERREUR SQL LEADERBOARD (FIX APPLIQUÉ):", error);
+    
     res.status(500).json({ 
-      message: "Erreur serveur lors de la récupération des données brutes",
+      message: "Erreur serveur lors de la récupération des données",
       error: process.env.NODE_ENV === 'development' ? error : {} 
     });
   }
